@@ -46,7 +46,7 @@
             containerElement:getPledgContainer{$value.id}(),
             paymentNotificationUrl: "{$value.notificationUrl}",
             signature: "{$value.signature}",
-            externalCheckoutValidation: flase,
+            externalCheckoutValidation: false,
             showCloseButton: false,
             onCheckoutFormStatusChange: function(readiness){
                 //document.querySelector("#btn-validation-1").disabled = !readiness;
