@@ -22,6 +22,11 @@
     <!-- This script contains the call to the plugin
          See the "Javascript" section below -->
     <script type="text/javascript">
+
+        var isError{$value.id} = false;
+        var messageError{$value.id} = '';
+        var isOpen{$value.id} = false;
+
         function getPledgButton{$value.id}() {
             return document.querySelector("#installment-button-{$value.id}")
         }
@@ -40,6 +45,16 @@
             hiddenInput.setAttribute("name", label)
             hiddenInput.setAttribute("value", value)
             form.appendChild(hiddenInput)
+        }
+
+        function displayError{$value.id}() {
+            getPledgContainer{$value.id}().remove();
+
+            var alertDiv = document.createElement("div")
+            alertDiv.setAttribute("class", "alert alert-danger")
+            alertDiv.textContent = messageError{$value.id}
+            document.querySelector("#payment_pledg_{$value.id}").appendChild(alertDiv)
+
         }
 
         var pledg{$value.id} = new Pledg(getPledgButton{$value.id}(), {
@@ -61,11 +76,21 @@
             },
             // the function which can be used to handle the errors
             onError: function (error) {
+                isError{$value.id} = true;
+                messageError{$value.id} = error.message;
+
+                if (isOpen{$value.id}) {
+                    displayError{$value.id}();
+                }
+
                 // see the "Errors" section for more a detailed explanation
                 //document.querySelector("#btn-validation-{$value.id}").disabled = false;
             },
             onOpen: function() {
-                //document.querySelector("#btn-validation-1").style = '';
+                isOpen{$value.id} = true;
+                if (isError{$value.id}) {
+                    displayError{$value.id}();
+                }
             }
         });
 
