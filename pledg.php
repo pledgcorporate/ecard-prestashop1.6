@@ -51,7 +51,6 @@
 
 require_once _PS_MODULE_DIR_ . '/pledg/class/Pledgpaiements.php';
 require_once _PS_MODULE_DIR_ . '/pledg/vendor/autoload.php';
-use \Firebase\JWT\JWT;
 
 if (!defined('_PS_VERSION_')) {
     exit;
@@ -344,7 +343,7 @@ class Pledg extends PaymentModule{
                     $arrayPayload['data']['lastName'] = $paramsPledg['lastName'];
                     $arrayPayload['data']['address'] = $paramsPledg['shippingAddress'];
 
-                    $paramsPledg['signature'] = JWT::encode($arrayPayload, $result['secret']);
+                    $paramsPledg['signature'] = \Firebase\JWT\JWT::encode($arrayPayload, $result['secret']);
                 }
 
                 $paramsPledg['notificationUrl'] = $this->context->link->getModuleLink($this->name, 'notification', array('pledgPayment' => $result['id']), true);
