@@ -29,7 +29,7 @@ class PledgNotificationModuleFrontController extends ModuleFrontController
             exit;
         }
 
-        $dataToCheck = array(
+        /*$dataToCheck = array(
             "created_at",
             "error",
             "id",
@@ -53,7 +53,7 @@ class PledgNotificationModuleFrontController extends ModuleFrontController
 
         if ($hash != $data->signature) {
             exit;
-        }
+        }*/
 
         $cart = new Cart((int)str_replace('order_', '', $data->reference));
         if ($cart->id == null) {
@@ -62,7 +62,7 @@ class PledgNotificationModuleFrontController extends ModuleFrontController
 
         $pledgpaiementsConfirm = new PledgpaiementsConfirm();
         $pledgpaiementsConfirm->id_cart = $cart->id;
-        $pledgpaiementsConfirm->reference_pledg = $data->id;
+        $pledgpaiementsConfirm->reference_pledg = $data->reference;
         $pledgpaiementsConfirm->save();
 
 
