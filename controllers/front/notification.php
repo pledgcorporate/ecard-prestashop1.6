@@ -62,7 +62,7 @@ class PledgNotificationModuleFrontController extends ModuleFrontController
 
         $pledgpaiementsConfirm = new PledgpaiementsConfirm();
         $pledgpaiementsConfirm->id_cart = $cart->id;
-        $pledgpaiementsConfirm->reference_pledg = $data->id;
+        $pledgpaiementsConfirm->reference_pledg = $data->reference;
         $pledgpaiementsConfirm->save();
 
 
