@@ -71,7 +71,7 @@
                 var form = getPledgForm{$value.id}()
                 addHiddenInput{$value.id}(form, "merchantUid", "{$value.merchantUid}")
                 addHiddenInput{$value.id}(form, "reference", "{$value.reference}")
-                addHiddenInput{$value.id}(form, "transaction", resultpayment.transaction.id)
+                addHiddenInput{$value.id}(form, "transaction", resultpayment.purchase.uid)
                 form.submit()
             },
             // the function which can be used to handle the errors
