@@ -29,7 +29,7 @@ class PledgNotificationModuleFrontController extends ModuleFrontController
             exit;
         }
 
-        $dataToCheck = array(
+        /*$dataToCheck = array(
             "created_at",
             "error",
             "id",
@@ -53,7 +53,7 @@ class PledgNotificationModuleFrontController extends ModuleFrontController
 
         if ($hash != $data->signature) {
             exit;
-        }
+        }*/
 
         $cart = new Cart((int)str_replace('order_', '', $data->reference));
         if ($cart->id == null) {
