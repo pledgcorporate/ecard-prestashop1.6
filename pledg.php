@@ -58,17 +58,16 @@ if (!defined('_PS_VERSION_')) {
 
 class Pledg extends PaymentModule{
 
-    private $html = '';
-    private $postErrors = array();
-    public $serviceID;
-    public $secretKey;
-    public $gateway='https://www.fastpay.com/pay';
+    const PLEDG_REFERENCE_PREFIXE = 'PLEDG_';
 
+    /**
+     * Pledg constructor.
+     */
     public function __construct(){
 
         $this->name = 'pledg';
         $this->tab = 'payments_gateways';
-        $this->version = '1.0.1';
+        $this->version = '1.0.2';
         $this->author = 'GiniDev';
         $this->controllers = array('payment', 'validation', 'notification');
         $this->currencies = true;
@@ -87,7 +86,10 @@ class Pledg extends PaymentModule{
     }
 
 
-
+    /**
+     * Method Installer
+     * @return bool
+     */
     public function install(){
 
         return parent::install()
@@ -96,6 +98,7 @@ class Pledg extends PaymentModule{
         && $this->registerHook('payment')
         && $this->registerHook('paymentOptions')
         && $this->registerHook('paymentReturn')
+        && $this->registerHook('displayAdminOrderContentOrder')
         && $this->registerHook('displayBackOfficeHeader');
 
     }
@@ -138,6 +141,13 @@ class Pledg extends PaymentModule{
                 `reference_pledg` varchar(255) NULL,
                 PRIMARY KEY (`id`)
                 ) ENGINE=" . _MYSQL_ENGINE_ . " DEFAULT CHARSET=utf8;";
+
+        // UPDATE TABLE TO ADD ICON FIELD
+        $sqlCreate .= "
+            ALTER TABLE `" . _DB_PREFIX_ . "pledg_paiements`
+            ADD `icon` VARCHAR(512) NULL DEFAULT NULL
+            AFTER `secret`;
+        ";
  
         $sqlCreateLang = "CREATE TABLE IF NOT EXISTS `" . _DB_PREFIX_ . "pledg_paiements_lang` (
               `id` int(11) unsigned NOT NULL AUTO_INCREMENT,
@@ -176,12 +186,19 @@ class Pledg extends PaymentModule{
 
     protected function _uninstallSql()
     {
-        $sql = "DROP TABLE IF EXISTS `". _DB_PREFIX_ ."pledg_paiements`, `". _DB_PREFIX_ ."pledg_paiements_lang`, `". _DB_PREFIX_ ."pledg_paiements_confirm`;";
-        return Db::getInstance()->execute($sql);
+        return true;
+        //$sql = "DROP TABLE IF EXISTS `". _DB_PREFIX_ ."pledg_paiements`, `". _DB_PREFIX_ ."pledg_paiements_lang`, `". _DB_PREFIX_ ."pledg_paiements_confirm`;";
+        //return Db::getInstance()->execute($sql);
     }
 
-    public function hookPaymentOptions($params){
-
+    /**
+     * hookPaymentOptions
+     *
+     * @param $params
+     * @return array|void
+     */
+    public function hookPaymentOptions($params)
+    {
         if (!$this->active) {
             return;
         }
@@ -193,15 +210,16 @@ class Pledg extends PaymentModule{
         $payment_options = [];
 
         $sql = 'SELECT p.merchant_id, p.mode, pl.title, pl.description 
-                FROM '. _DB_PREFIX_ .Pledgpaiements::$definition['table'] . ' AS p 
-                LEFT JOIN '. _DB_PREFIX_ .Pledgpaiements::$definition['table'] . '_lang AS pl ON pl.id = p.id
+                FROM ' . _DB_PREFIX_ . Pledgpaiements::$definition['table'] . ' AS p 
+                LEFT JOIN ' . _DB_PREFIX_ . Pledgpaiements::$definition['table'] . '_lang AS pl ON pl.id = p.id
                 WHERE p.status = 1 AND pl.id_lang = ' . $this->context->language->id;
-        if ($results = Db::getInstance()->ExecuteS($sql)):
 
-            foreach($results as $result):
+        if ($results = Db::getInstance()->ExecuteS($sql)) {
+
+            foreach ($results as $result) {
 
                 $this->context->smarty->assign([
-                    'description'=> $result['description']
+                    'description' => $result['description']
                 ]);
 
                 $newOption = new PaymentOption();
@@ -211,24 +229,20 @@ class Pledg extends PaymentModule{
                 $newOption->setAdditionalInformation($this->fetch('module:pledg/views/templates/front/payment_infos.tpl'));
                 $newOption->setInputs([
                     'merchantUid' => [
-                        'name' =>'merchantUid',
-                        'type' =>'hidden',
+                        'name' => 'merchantUid',
+                        'type' => 'hidden',
                         'value' => $result['merchant_id'],
                     ],
                     'mode' => [
-                        'name' =>'mode',
-                        'type' =>'hidden',
-                        'value' => ( ($result['mode'] == 1)? 'https://front.ecard.pledg.co' : 'https://staging.front.ecard.pledg.co' ),
+                        'name' => 'mode',
+                        'type' => 'hidden',
+                        'value' => (($result['mode'] == 1) ? 'https://front.ecard.pledg.co' : 'https://staging.front.ecard.pledg.co'),
                     ],
                 ]);
 
                 array_push($payment_options, $newOption);
-                
-
-
-            endforeach;
-
-        endif;        
+            }
+        }
 
         return $payment_options;
 
@@ -256,7 +270,6 @@ class Pledg extends PaymentModule{
      */
     public function hookPayment($params)
     {
-
         $cart = $this->context->cart;
 
         // On liste les moyens de de paiements disponibles
@@ -283,22 +296,46 @@ class Pledg extends PaymentModule{
         // Currency
         $currency = New Currency($cart->id_currency);
 
-        $sql = 'SELECT p.id, p.merchant_id, p.mode, pl.title, pl.description, p.secret 
+        $sql = 'SELECT p.id, p.merchant_id, p.mode, pl.title, pl.description, p.secret, p.icon 
                 FROM '. _DB_PREFIX_ .Pledgpaiements::$definition['table'] . ' AS p 
                 LEFT JOIN '. _DB_PREFIX_ .Pledgpaiements::$definition['table'] . '_lang AS pl ON pl.id = p.id
                 WHERE p.status = 1 AND pl.id_lang = ' . $this->context->language->id;
+
+        // Phone E164 Conversion
+        $phone = $address->phone_mobile != '' ? $address->phone_mobile : $address->phone;
+        $phoneUtil = \libphonenumber\PhoneNumberUtil::getInstance();
+        try {
+            $phoneNumber = $phoneUtil->parse($phone, $country_iso_code);
+            $phone = $phoneUtil->format($phoneNumber, \libphonenumber\PhoneNumberFormat::E164);
+        } catch (\libphonenumber\NumberParseException $e) {
+
+            Logger::addLog(
+                sprintf(
+                    $this->l('Pledg Payment Phone Number Parse error : %s'),
+                    ($phone)
+                ),
+                1,
+                null,
+                null,
+                null,
+                true
+            );
+
+            $phone = '';
+        }
+
         if ($results = Db::getInstance()->ExecuteS($sql)) {
             foreach ($results as $result) {
                 $paramsPledg = [];
 
-
                 $paramsPledg = array(
                     'id' => $result['id'],
                     'titlePayment' => $result['title'],
+                    'icon' => $result['icon'] != '' && file_exists(_PS_MODULE_DIR_ . $result['icon']) ? _MODULE_DIR_ . $result['icon'] : null,
                     'merchantUid' => $result['merchant_id'],
                     'mode' => (($result['mode'] == 1) ? 'master' : 'staging'),
                     'title' => ( ($title)? implode(', ', $title) : '' ),
-                    'reference' => 'order_' . $cart->id,
+                    'reference' => self::PLEDG_REFERENCE_PREFIXE . $cart->id,
                     'amountCents' => $total,
                     'currency' =>  $currency->iso_code,
                     'metadata'  => [
@@ -308,7 +345,7 @@ class Pledg extends PaymentModule{
                     'firstName' => $customer->firstname,
                     'lastName' =>  $customer->lastname,
                     'email' => $customer->email,
-                    'phoneNumber' => $address->phone,
+                    'phoneNumber' => $phone,
                     'birthDate' => ( ($customer->birthday != '0000-00-00')? $customer->birthday : date('Y-m-d')),
                     'birthCity' => '',
                     'birthStateProvince' => '',
@@ -331,13 +368,14 @@ class Pledg extends PaymentModule{
                     ],
                 );
 
-
-                if (isset($result['secret'])) {
+                if (isset($result['secret']) && !empty($result['secret'])) {
 
                     $arrayPayload['data']['merchantUid'] = $result['merchant_id'];
                     $arrayPayload['data']['amountCents'] = $total;
+                    $arrayPayload['data']['currency'] = $paramsPledg['currency'];
                     $arrayPayload['data']['title'] = $paramsPledg['title'];
                     $arrayPayload['data']['email'] = $paramsPledg['email'];
+                    $arrayPayload['data']['phoneNumber'] = $paramsPledg['phoneNumber'];
                     $arrayPayload['data']['reference'] = $paramsPledg['reference'];
                     $arrayPayload['data']['firstName'] = $paramsPledg['firstName'];
                     $arrayPayload['data']['lastName'] = $paramsPledg['lastName'];
@@ -346,7 +384,17 @@ class Pledg extends PaymentModule{
                     $paramsPledg['signature'] = \Firebase\JWT\JWT::encode($arrayPayload, $result['secret']);
                 }
 
-                $paramsPledg['notificationUrl'] = $this->context->link->getModuleLink($this->name, 'notification', array('pledgPayment' => $result['id']), true);
+                $paramsPledg['notificationUrl'] =
+                    $this->context->link->getModuleLink(
+                        $this->name,
+                        'notification',
+                        array(
+                            'pledgPayment' => $result['id'],
+                            'amount' => $total,
+                            'currency' => $currency->iso_code,
+                        ),
+                        true
+                    );
                 $payments_pledg[] = $paramsPledg;
 
                 //
@@ -364,6 +412,14 @@ class Pledg extends PaymentModule{
     }
 
     public function hookPaymentReturn($params){
+        Logger::addLog(
+            $this->l('hookPaymentReturn'),
+            1,
+            null,
+            null,
+            null,
+            true
+        );
         if (!$this->active) {
             return;
         }
@@ -389,6 +445,15 @@ class Pledg extends PaymentModule{
 
     public function hookDisplayBackOfficeHeader() {
         $this->context->controller->addCss($this->_path.'assets/css/tab.css');
+    }
+
+    public function hookDisplayAdminOrderContentOrder($params) {
+
+        require_once _PS_MODULE_DIR_ . 'pledg/class/PledgpaiementsConfirm.php';
+
+        $pledgPaimentConfirm = new PledgpaiementsConfirm(PledgpaiementsConfirm::getByIdCart($params['order']->id_cart));
+
+        return '<span class="badge">' . $this->l('Pledg Reference : '). $pledgPaimentConfirm->reference_pledg . '</span><br><br>';
     }
 
 }
