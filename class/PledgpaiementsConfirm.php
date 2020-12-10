@@ -9,20 +9,13 @@ class PledgpaiementsConfirm extends ObjectModel{
     public $reference_pledg;
 
     public static $definition = [
-
         'table' => 'pledg_paiements_confirm',
-
         'primary' => 'id',
-
         'fields' => [
-
             // Champs Standards
-
             'id_cart'                => ['type' => self::TYPE_INT, 'validate' => 'isUnsignedInt'],
             'reference_pledg'           => ['type' => self::TYPE_STRING],
-
         ],
-
     ];
 
     public static function getByIdCart($id_cart) {
@@ -32,5 +25,4 @@ class PledgpaiementsConfirm extends ObjectModel{
         $query->where('`id_cart` = '.(int)$id_cart);
         return (int)Db::getInstance()->getValue($query);
     }
-
 }

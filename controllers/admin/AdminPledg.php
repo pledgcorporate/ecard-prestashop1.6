@@ -17,7 +17,7 @@ class AdminPledgController extends ModuleAdminController
         //Liste des champs de l'objet à afficher dans la liste
         $this->fields_list = [
         	'status' => [
-                'title' => $this->module->l('Afficher'),
+                'title' => $this->module->l('Display'),
                 'lang' => true, //Flag pour dire d'utiliser la langue
                 'align' => 'left',
                 'callback' => 'getStatus',
@@ -29,7 +29,7 @@ class AdminPledgController extends ModuleAdminController
                 'callback' => 'getMode',
             ],
             'title' => [
-                'title' => $this->module->l('Titre'),
+                'title' => $this->module->l('Title'),
                 'lang' => true, //Flag pour dire d'utiliser la langue
                 'align' => 'left',
             ],
@@ -79,7 +79,7 @@ class AdminPledgController extends ModuleAdminController
         //Bouton d'ajout
         $this->page_header_toolbar_btn['new'] = array(
             'href' => self::$currentIndex . '&add' . $this->table . '&token=' . $this->token,
-            'desc' => $this->module->l('Ajouter un paiement'),
+            'desc' => $this->module->l('Add Payment'),
             'icon' => 'process-icon-new'
         );
  
@@ -97,22 +97,22 @@ class AdminPledgController extends ModuleAdminController
         $this->fields_form = [
             //Entête
             'legend' => [
-                'title' => $this->module->l('Mode de paiement'),
+                'title' => $this->module->l('Payment mode'),
                 'icon' => 'icon-cog'
             ],
             //Champs
             'input' => [
             	[
                     'type' => 'text',
-                    'label' => $this->module->l('Titre'),
+                    'label' => $this->module->l('Title'),
                     'name' => 'title',
                     'lang' => true,
                     'required' => true,
-                    'empty_message' => $this->module->l('Le titre est obligatoire'),
+                    'empty_message' => $this->module->l('Title is required'),
                 ],
                 [
                     'type' => 'switch', //Type de champ
-                    'label' => $this->module->l('Activer le paiement'), //Label
+                    'label' => $this->module->l('Activated payment'), //Label
                     'name' => 'status', //Nom
                     'values' => [
                         [
@@ -124,7 +124,7 @@ class AdminPledgController extends ModuleAdminController
                         [
                         	'id' => 'dev',
                             'value' => 0,
-                            'label' => $this->l('Text')
+                            'label' => $this->l('Test')
                         ],
 
                     ]
@@ -153,7 +153,7 @@ class AdminPledgController extends ModuleAdminController
                     'label' => $this->module->l('Merchant ID'),
                     'name' => 'merchant_id',
                     'required' => true,
-                    'empty_message' => $this->module->l('Le merchant ID est obligatoire'),
+                    'empty_message' => $this->module->l('Merchant ID is required'),
                 ],
                 [
                     'type' => 'text',
@@ -161,6 +161,14 @@ class AdminPledgController extends ModuleAdminController
                     'name' => 'secret',
                     'required' =>true,
                     'empty_message' => $this->module->l(''),
+                ],
+                [
+                    'type' => 'file',
+                    'label' => $this->module->l('Icon'),
+                    'name' => 'icon',
+                    'required' =>false,
+                    'empty_message' => $this->module->l(''),
+                    'thumb' => _MODULE_DIR_ . $this->object->icon,
                 ],
                 [
                     'type' => 'textarea',
@@ -178,4 +186,118 @@ class AdminPledgController extends ModuleAdminController
         return parent::renderForm();
     }
 
+    /**
+     * Process Add method
+     * @return bool
+     */
+    public function processAdd() {
+        return $this->checkUploadIcon('add') ? parent::processAdd() : false;
+    }
+
+    /**
+     * Process Update method
+     * @return bool
+     */
+    public function processUpdate() {
+        return $this->checkUploadIcon('edit') ? parent::processUpdate() : false;
+    }
+
+    /**
+     * Check if icon uploaded is an image file
+     * @param string $display
+     * @return bool
+     */
+    private function checkUploadIcon($display = 'add') {
+        if ($_FILES['icon']['error'] == UPLOAD_ERR_NO_FILE) {
+            return true;
+        }
+
+        if ($_FILES['icon']['error'] !== UPLOAD_ERR_OK) {
+            $this->errors[] = sprintf($this->l('Upload failed with error code %s'), $_FILES['icon']['error']);
+            $this->display = $display;
+
+            return false;
+        }
+
+        $info = getimagesize($_FILES['icon']['tmp_name']);
+        if ($info === FALSE) {
+            $this->errors[] = $this->l('Unable to determine image type of uploaded file');
+            $this->display = $display;
+
+            return false;
+        }
+
+        if (($info[2] !== IMAGETYPE_GIF) && ($info[2] !== IMAGETYPE_JPEG) && ($info[2] !== IMAGETYPE_PNG)) {
+            $this->errors[] = $this->l('Please give a gif, jpeg or png file.');
+            $this->display = $display;
+
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * Upload icon and return path
+     *
+     * @param $object
+     * @return string
+     */
+    private function uploadIcon($object) {
+        if ($_FILES['icon']['error'] == UPLOAD_ERR_NO_FILE) {
+            return '';
+        }
+
+        $name = '/pledg/assets/img/' . $object->id . '-' .$_FILES['icon']['name'];
+
+        if (!file_exists(_PS_MODULE_DIR_ . '/pledg/assets/img/')) {
+            mkdir ( _PS_MODULE_DIR_ . '/pledg/assets/img/', 0777, true);
+        }
+
+        if (
+            move_uploaded_file(
+                $_FILES['icon']['tmp_name'],
+                _PS_MODULE_DIR_ . $name
+            )
+        ) {
+            return $name;
+        } else {
+            $this->errors[] = $this->l('Error on uploaded icon.');
+            return '';
+        }
+
+    }
+
+    /**
+     * After Add Object
+     *
+     * @param $object
+     * @return bool
+     */
+    protected function afterAdd($object)
+    {
+        $object->icon = $this->uploadIcon($object);
+        $object->save();
+
+        Logger::addLog($this->l('Create Pledg Payment #') . $object->id . ' : ' . $object->__toString(), 1, null, get_class($object), $object->id);
+
+        return true;
+    }
+
+    /**
+     * After Update Object
+     *
+     * @param $object
+     * @return bool
+     */
+    protected function afterUpdate($object)
+    {
+        $icon = $this->uploadIcon($object);
+        $object->icon = $icon == '' ? $object->icon : $icon;
+        $object->save();
+
+        Logger::addLog($this->l('Update Pledg Payment #') . $object->id . ' : ' . $object->__toString(), 1, null, get_class($object), $object->id);
+
+        return true;
+    }
 }

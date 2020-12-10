@@ -1,7 +1,8 @@
 <?php
 
-
-
+/**
+ * Class Pledgpaiements
+ */
 class Pledgpaiements extends ObjectModel{
 
     public $id;
@@ -9,6 +10,7 @@ class Pledgpaiements extends ObjectModel{
     public $status;
     public $merchant_id;
     public $secret;
+    public $icon;
 
     public $title;
     public $description; 
@@ -27,8 +29,9 @@ class Pledgpaiements extends ObjectModel{
 
             'status'                => ['type' => self::TYPE_INT, 'validate' => 'isUnsignedInt'],
             'mode'                  => ['type' => self::TYPE_INT, 'validate' => 'isUnsignedInt'],
-            'merchant_id'           => ['type' => self::TYPE_STRING, 'validate' => 'isGenericName'],
-            'secret'           => ['type' => self::TYPE_STRING, 'validate' => 'isGenericName'],
+            'merchant_id'           => ['type' => self::TYPE_STRING, 'validate' => 'isGenericName', 'required' => true],
+            'secret'                => ['type' => self::TYPE_STRING, 'validate' => 'isGenericName', 'required' => true],
+            'icon'                  => ['type' => self::TYPE_STRING],
 
             //Champs langue
 
@@ -38,5 +41,15 @@ class Pledgpaiements extends ObjectModel{
         ],
 
     ];
+
+    /**
+     * __toString Method
+     *
+     * @return false|string
+     */
+    public function __toString()
+    {
+        return json_encode($this);
+    }
 
 }
