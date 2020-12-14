@@ -136,7 +136,7 @@ class PledgNotificationModuleFrontController extends ModuleFrontController
             $this->validOrder(
                 $signatureDecode->reference,
                 $signatureDecode->amount_cents,
-                $signatureDecode->additional_data->charge_id,
+                $signatureDecode->transfer_order_item_uid,
                 'TRANSFERT',
                 $_GET['currency']
             );
@@ -159,6 +159,64 @@ class PledgNotificationModuleFrontController extends ModuleFrontController
             header('HTTP/1.0 403 Forbidden');
             echo 'Signature doesn\'t found';
             exit;
+
+        } else if (isset($data->transfer_order_item_uid)) {
+			// Mode Transfert non signé
+			$dataToCheck = array(
+                "reference",
+				"created",
+                "transfer_order_item_uid",
+				"amount_cents"
+            );
+
+            Logger::addLog(
+                sprintf(
+                    $this->module->l(
+                        'Pledg Payment Notification Mode Transfert NS - Data receive : %s'
+                    ),
+                    serialize($data)
+                ),
+                1,
+                null,
+                null,
+                null,
+                true
+            );
+
+            foreach ($dataToCheck as $dataCheck) {
+                if (!isset($data->{$dataCheck})) {
+                    Logger::addLog(
+                        sprintf(
+                            $this->module->l(
+                                'Pledg Payment Notification Mode Transfert NS Exception - Params %s is missing (data receive %s).'
+                            ),
+                            $dataCheck,
+                            serialize($data)
+                        ),
+                        2,
+                        null,
+                        null,
+                        null,
+                        true
+                    );
+
+                    header('HTTP/1.0 403 Forbidden');
+                    echo 'Params ' . $dataCheck . ' is missing (data receive %s)';
+                    exit;
+                }
+            }
+
+            // Validate Order
+            $this->validOrder(
+                $data->reference,
+                $data->amount_cents,
+                $data->transfer_order_item_uid,
+                'TRANSFERT',
+                $_GET['currency']
+            );
+
+            exit;
+			
         } else {
             // Mode Back
             $dataToCheck = array(

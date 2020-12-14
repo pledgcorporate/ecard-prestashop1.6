@@ -30,7 +30,7 @@ class Pledgpaiements extends ObjectModel{
             'status'                => ['type' => self::TYPE_INT, 'validate' => 'isUnsignedInt'],
             'mode'                  => ['type' => self::TYPE_INT, 'validate' => 'isUnsignedInt'],
             'merchant_id'           => ['type' => self::TYPE_STRING, 'validate' => 'isGenericName', 'required' => true],
-            'secret'                => ['type' => self::TYPE_STRING, 'validate' => 'isGenericName', 'required' => true],
+            'secret'                => ['type' => self::TYPE_STRING, 'validate' => 'isGenericName', 'required' => false],
             'icon'                  => ['type' => self::TYPE_STRING],
 
             //Champs langue

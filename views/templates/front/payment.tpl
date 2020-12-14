@@ -76,7 +76,7 @@
                 signature: "{$value.signature}",
             {else}
                 merchantUid: "{$value.merchantUid}",
-                title: "{$value.title}",
+                title: "{addslashes($value.title)}",
                 reference: "{$value.reference}",
                 amountCents: "{$value.amountCents}",
                 currency: "{$value.currency}",
