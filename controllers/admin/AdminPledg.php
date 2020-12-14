@@ -159,7 +159,7 @@ class AdminPledgController extends ModuleAdminController
                     'type' => 'text',
                     'label' => $this->module->l('Secret'),
                     'name' => 'secret',
-                    'required' =>true,
+                    'required' =>false,
                     'empty_message' => $this->module->l(''),
                 ],
                 [
