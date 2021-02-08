@@ -42,6 +42,11 @@ class AdminPledgController extends ModuleAdminController
                 'title' => $this->module->l('Secret'),
                 'lang' => true, //Flag pour dire d'utiliser la langue
                 'align' => 'left',
+            ],
+            'priority' => [
+                'title' => $this->module->l('Priority'),
+                'lang' => true, //Flag pour dire d'utiliser la langue
+                'align' => 'right',
             ]
         ];
  
@@ -93,6 +98,16 @@ class AdminPledgController extends ModuleAdminController
      */
     public function renderForm()
     {
+        $img = ($this->object->icon) ? (_MODULE_DIR_ . $this->object->icon) : null ;
+        $img = ($img) ? '<img src="' . $img . '" class="img-thumbnail" width="400">' : "";
+        $shops = [];
+        foreach (Shop::getShops(false) as $key => $shop) {
+            $shops[] = array(
+                'key' => $shop['id_shop'],
+                'name' => $shop['name']
+            );
+        }
+        $this->fields_value['shops[]'] = explode(',',$this->object->shops);
         //Définition du formulaire d'édition
         $this->fields_form = [
             //Entête
@@ -163,12 +178,28 @@ class AdminPledgController extends ModuleAdminController
                     'empty_message' => $this->module->l(''),
                 ],
                 [
+                    'type' => 'text',
+                    'label' => $this->module->l('Min'),
+                    'name' => 'min',
+                    'required' =>false,
+                    'hint' => $this->module->l('Must be a number. Minimum transaction amount, zero does not define a minimum'),
+                    'empty_message' => $this->module->l(''),
+                ],
+                [
+                    'type' => 'text',
+                    'label' => $this->module->l('Max'),
+                    'name' => 'max',
+                    'required' =>false,
+                    'hint' => $this->module->l('Must be a number. Maximum transaction amount, zero does not define a maximum'),
+                    'empty_message' => $this->module->l(''),
+                ],
+                [
                     'type' => 'file',
                     'label' => $this->module->l('Icon'),
                     'name' => 'icon',
                     'required' =>false,
                     'empty_message' => $this->module->l(''),
-                    'thumb' => _MODULE_DIR_ . $this->object->icon,
+                    'image' => $img,
                 ],
                 [
                     'type' => 'textarea',
@@ -177,10 +208,29 @@ class AdminPledgController extends ModuleAdminController
                     'lang' => true,
                     'autoload_rte' => true, //Flag pour éditeur Wysiwyg
                 ],
+                [
+                    'type' => 'text',
+                    'label' => $this->module->l('Priority'),
+                    'name' => 'priority',
+                    'required' =>false,
+                    'empty_message' => $this->module->l(''),
+                ],
+                [
+                    'type' => 'select',
+                    'label' => $this->module->l('Disabled shops'),
+                    'name' => 'shops[]',
+                    'multiple' => 'true',
+                    'options' => array(
+                        'query' => $shops,
+                        'id' => 'key',
+                        'name' => 'name'
+                    )
+                ]
             ],
             //Boutton de soumission
             'submit' => [
                 'title' => $this->l('Save'), //On garde volontairement la traduction de l'admin par défaut
+                'name' => 'submitpledgadmin'
             ]
         ];
         return parent::renderForm();
@@ -201,6 +251,15 @@ class AdminPledgController extends ModuleAdminController
     public function processUpdate() {
         return $this->checkUploadIcon('edit') ? parent::processUpdate() : false;
     }
+
+    public function postProcess()
+	{
+        if (Tools::isSubmit('submitpledgadmin')) 
+		{
+			$_POST['shops'] = implode(',', Tools::getValue('shops'));
+ 		}
+		parent::postProcess();
+	}
 
     /**
      * Check if icon uploaded is an image file

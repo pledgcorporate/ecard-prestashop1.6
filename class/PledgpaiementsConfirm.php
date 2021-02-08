@@ -1,7 +1,4 @@
 <?php
-
-
-
 class PledgpaiementsConfirm extends ObjectModel{
 
     public $id;

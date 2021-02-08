@@ -2,9 +2,9 @@
 <module>
 	<name>pledg</name>
 	<displayName><![CDATA[Payer &agrave; plusieurs]]></displayName>
-	<version><![CDATA[1.0.0]]></version>
+	<version><![CDATA[2.0.0]]></version>
 	<description><![CDATA[Ce module vous permet d&rsquo;accepter des paiements par Pledg.]]></description>
-	<author><![CDATA[GiniDev]]></author>
+	<author><![CDATA[LucasFougeras]]></author>
 	<tab><![CDATA[payments_gateways]]></tab>
 	<confirmUninstall><![CDATA[Êtes-vous sûr de vouloir supprimer ces détails?]]></confirmUninstall>
 	<is_configurable>0</is_configurable>
