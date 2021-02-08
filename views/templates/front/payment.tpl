@@ -10,21 +10,16 @@
         <div class="row"><div class="col-xs-12{if version_compare($smarty.const._PS_VERSION_, '1.6.0.11', '<')} col-md-6{/if}">
     {/if}
 
-    <form id="installment-form-{$value.id}" method="POST" action="{$value.redirectUrl}">
+    <form id="installment-form-{$value.id}" method="POST" action="{$value.actionUrl}">
         <div class="payment_module pledg" id="payment_pledg_{$value.id}">
             <button id="installment-button-{$value.id}" type="button" class="{if $value.icon}has-icon{/if}">
                 {if $value.icon}
                     <img src="{$value.icon}">
                 {/if}
-                {$value.titlePayment}
+                <span>{$value.titlePayment}</span>
             </button>
 
             <div id="installment-container-{$value.id}"></div>
-            <!--<div class="text-xs-center">
-                <button id="btn-validation-{$value.id}" style="display:none;opacity: 0;" type="button" class="button btn btn-default button-medium" disabled>
-                    <span>Valider le paiement</span>
-                </button>
-            </div>-->
         </div>
     </form>
 
@@ -34,7 +29,6 @@
     <!-- This script contains the call to the plugin
          See the "Javascript" section below -->
     <script type="text/javascript">
-
         var isError{$value.id} = false;
         var messageError{$value.id} = '';
         var isOpen{$value.id} = false;
@@ -61,12 +55,10 @@
 
         function displayError{$value.id}() {
             getPledgContainer{$value.id}().remove();
-
             var alertDiv = document.createElement("div")
             alertDiv.setAttribute("class", "alert alert-danger")
             alertDiv.textContent = messageError{$value.id}
             document.querySelector("#payment_pledg_{$value.id}").appendChild(alertDiv)
-
         }
 
         var pledg{$value.id} = new Pledg(getPledgButton{$value.id}(), {
@@ -87,34 +79,24 @@
                 address: {$value.address|json_encode},
                 phoneNumber: "{$value.phoneNumber}",
             {/if}
-            externalCheckoutValidation: false,
             showCloseButton: false,
             lang: "{$lang}",
-            onCheckoutFormStatusChange: function(readiness){
-                //document.querySelector("#btn-validation-1").disabled = !readiness;
-            },
-            // the function which triggers the payment
             onSuccess: function (resultpayment) {
                 var form = getPledgForm{$value.id}();
                 addHiddenInput{$value.id}(form, "merchantUid", "{$value.merchantUid}");
                 addHiddenInput{$value.id}(form, "reference", "{$value.reference}");
                 addHiddenInput{$value.id}(form, "transaction", resultpayment.purchase.reference);
+                var rp_string = JSON.stringify(resultpayment);
+                addLog('Pledg Form Success Paid. Return value : ' . rp_string, 'success', 'PledgPayment', {$value.id});
                 form.submit();
-                addLog('Pledg Form Success Paid. Return value : ' . JSON.stringify(resultpayment), 'success', 'PledgPayment', {$value.id});
             },
-            // the function which can be used to handle the errors
             onError: function (error) {
                 isError{$value.id} = true;
                 messageError{$value.id} = error.message;
-
                 addLog('Error Pledg Payment Form : ' + error.message, 'error', 'PledgPayment', {$value.id});
-
                 if (isOpen{$value.id}) {
                     displayError{$value.id}();
                 }
-
-                // see the "Errors" section for more a detailed explanation
-                //document.querySelector("#btn-validation-{$value.id}").disabled = false;
             },
             onOpen: function() {
                 addLog('Open Pledg Payment Form', 'success', 'PledgPayment', {$value.id});

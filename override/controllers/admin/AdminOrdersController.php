@@ -45,7 +45,7 @@ class AdminOrdersController extends AdminOrdersControllerCore
         $this->context = Context::getContext();
 
         $this->_select = '
-		a.id_currency,
+		a.id_currency, a.reference as reference,
 		a.id_order AS id_pdf,
 		CONCAT(LEFT(c.`firstname`, 1), \'. \', c.`lastname`) AS `customer`,
 		osl.`name` AS `osname`,
