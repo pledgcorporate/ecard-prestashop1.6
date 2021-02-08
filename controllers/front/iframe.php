@@ -10,7 +10,7 @@ class PledgIframeModuleFrontController extends ModuleFrontController
     public function initContent()
     {
         parent::initContent();        
-        $cart = $this->context->cart;      
+        $cart = $this->context->cart;
 
         if (!$this->module->checkCurrency($cart)) {            
             Tools::redirect('index.php?controller=order');       
