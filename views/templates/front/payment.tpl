@@ -76,11 +76,14 @@
                 firstName: "{$value.firstName}",
                 lastName: "{$value.lastName}",
                 email: "{$value.email}",
-                address: {$value.address|json_encode},
+                countryCode: "{$value.countryCode}",
+                metadata: {$value.metadata nofilter},
+                address: {$value.address nofilter},
+                shippingAddress: {$value.shippingAddress nofilter},
                 phoneNumber: "{$value.phoneNumber}",
+                lang: "{$value.lang}",
             {/if}
-            showCloseButton: false,
-            lang: "{$lang}",
+            showCloseButton: {if $paramsPledg.showCloseButton}true{else}false{/if},
             onSuccess: function (resultpayment) {
                 var form = getPledgForm{$value.id}();
                 addHiddenInput{$value.id}(form, "merchantUid", "{$value.merchantUid}");
