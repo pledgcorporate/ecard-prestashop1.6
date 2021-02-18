@@ -179,6 +179,11 @@ class PledgNotificationModuleFrontController extends ModuleFrontController
             exit;
         }
         if(!Validate::isLoadedObject($order)){
+            sleep(3);
+            //Waiting buffer to be sure that the validation and the notification doesn't occur at the same time
+        }
+
+        if(!Validate::isLoadedObject($order)){
             // In this case the notification cames before the validation
             // An order has then to be validated and saved in DB
             $customer = New Customer($cart->id_customer);
@@ -213,6 +218,13 @@ class PledgNotificationModuleFrontController extends ModuleFrontController
             $pledgpaiementsConfirm->save();
         }
         else{
+            if($order->current_state === Configuration::get("PS_OS_OUTOFSTOCK_PAID") || $order->current_state === Configuration::get("PS_OS_PAYMENT")){
+                Logger::addLog(sprintf($this->module->l('Pledg Payment Notification Mode %s Exception - Order already notified.'),$mode));
+                header('HTTP/1.0 403 Forbidden');
+                echo 'Already notified';
+                exit;
+            }
+            
             $priceConverted = Tools::convertPrice($cart->getOrderTotal(), Currency::getIdByIsoCode($cart->getCurrency));
             $total = str_replace(
                 '.',
@@ -238,7 +250,7 @@ class PledgNotificationModuleFrontController extends ModuleFrontController
                 ),  'order_reference = "'.pSQL($order->reference).'"');
             }
             catch (Throwable $e){
-                Logger::addLog($e->getMessage(),4);
+                Logger::addLog("Pledg Payment Notification Exception : " . $e->getMessage()." Can be ignored if next notification succeeds.",3);
             }
             Logger::addLog(sprintf($this->module->l('Pledg Payment Notification Mode %s - Order validated by notication.'),$mode), 1, null, null, null, true);
             

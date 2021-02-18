@@ -13,7 +13,7 @@ class Pledgpaiements extends ObjectModel{
     public $min;
     public $max;
     public $icon;
-    public $priority;
+    public $position;
     public $shops;
 
     public $title;
@@ -38,7 +38,7 @@ class Pledgpaiements extends ObjectModel{
             'icon'                  => ['type' => self::TYPE_STRING],
             'min'                  => ['type' => self::TYPE_INT, 'validate' => 'isUnsignedInt'],
             'max'                  => ['type' => self::TYPE_INT, 'validate' => 'isUnsignedInt'],
-            'priority'                  => ['type' => self::TYPE_INT, 'validate' => 'isUnsignedInt'],
+            'position'                  => ['type' => self::TYPE_INT, 'validate' => 'isUnsignedInt'],
             'shops'                  => ['type' => self::TYPE_STRING, 'validate' => 'isGenericName', 'required' => false],
 
             //Champs langue

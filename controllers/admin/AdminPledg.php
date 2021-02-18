@@ -43,8 +43,8 @@ class AdminPledgController extends ModuleAdminController
                 'lang' => true, //Flag pour dire d'utiliser la langue
                 'align' => 'left',
             ],
-            'priority' => [
-                'title' => $this->module->l('Priority'),
+            'position' => [
+                'title' => $this->module->l('Position'),
                 'lang' => true, //Flag pour dire d'utiliser la langue
                 'align' => 'right',
             ]
@@ -210,8 +210,8 @@ class AdminPledgController extends ModuleAdminController
                 ],
                 [
                     'type' => 'text',
-                    'label' => $this->module->l('Priority'),
-                    'name' => 'priority',
+                    'label' => $this->module->l('Position'),
+                    'name' => 'position',
                     'required' =>false,
                     'empty_message' => $this->module->l(''),
                 ],
@@ -256,7 +256,12 @@ class AdminPledgController extends ModuleAdminController
 	{
         if (Tools::isSubmit('submitpledgadmin')) 
 		{
-			$_POST['shops'] = implode(',', Tools::getValue('shops'));
+            if(is_array(Tools::getValue('shops'))){
+                $_POST['shops'] = implode(',', Tools::getValue('shops'));
+            }
+            else{
+                $_POST['shops'] = Tools::getValue('shops');
+            }
  		}
 		parent::postProcess();
 	}

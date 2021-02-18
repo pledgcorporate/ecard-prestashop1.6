@@ -43,7 +43,7 @@ class Pledg extends PaymentModule{
     public function __construct(){
         $this->name = 'pledg';
         $this->tab = 'payments_gateways';
-        $this->version = '2.0.0';
+        $this->version = '2.1.2';
         $this->author = 'LucasFougeras';
         $this->controllers = array('payment', 'validation', 'notification');
         $this->currencies = true;
@@ -52,7 +52,7 @@ class Pledg extends PaymentModule{
         $this->displayName = $this->l('Split the payment');
         $this->description = $this->l('This module allows you to accept payments by pledg.');
         $this->confirmUninstall = $this->l('Are you sure you want to delete these details?');
-        $this->ps_versions_compliancy = array('min' => '1.6', 'max' => _PS_VERSION_);
+        $this->ps_versions_compliancy = array('min' => '1.6', 'max' => '1.6.1.24');
 
         if (!count(Currency::checkPaymentCurrencies($this->id))) {
             $this->warning = $this->l('No currency has been set for this module.');
@@ -128,11 +128,8 @@ class Pledg extends PaymentModule{
             ADD `max` int(11) NULL DEFAULT NULL AFTER `secret`;";
         $sqlCreate5 = "
             ALTER TABLE `" . _DB_PREFIX_ . "pledg_paiements`
-            ADD `priority` int(11) NULL DEFAULT NULL AFTER `secret`;";
-        $sqlCreate6 = "
-            ALTER TABLE `" . _DB_PREFIX_ . "pledg_paiements`
             ADD `icon` VARCHAR(512) NULL DEFAULT NULL AFTER `max`;";
-        $sqlCreate7 = "
+        $sqlCreate6 = "
             ALTER TABLE `" . _DB_PREFIX_ . "pledg_paiements`
             ADD `shops` VARCHAR(512) NULL DEFAULT NULL AFTER `icon`;";
 
@@ -150,7 +147,6 @@ class Pledg extends PaymentModule{
         Db::getInstance()->execute($sqlCreate4);
         Db::getInstance()->execute($sqlCreate5);
         Db::getInstance()->execute($sqlCreate6);
-        Db::getInstance()->execute($sqlCreate7);
         Db::getInstance()->execute($sqlCreateLang);
         return true;
     }
@@ -176,7 +172,7 @@ class Pledg extends PaymentModule{
         $languagesList = \Language::getLanguages();
         $trad = array(
             'en' => 'Waiting for Pledg payment notification',
-            'fr' => 'En attente de la notificationd de paiement par Pledg',
+            'fr' => 'En attente de la notification de paiement par Pledg',
             'es' => 'A la espera de la notificación de pago de Pledg',
             'it' => 'In attesa della notifica di pagamento Pledg',
             'nl' => 'Wachten op Pledg betalings notificatie',
@@ -294,63 +290,6 @@ class Pledg extends PaymentModule{
         return true;
     }
 
-    /**
-     * hookPaymentOptions
-     *
-     * @param $params
-     * @return array|void
-     */
-    public function hookPaymentOptions($params)
-    {
-        if (!$this->active) {
-            return;
-        }
-
-        if (!$this->checkCurrency($params['cart'])) {
-            return;
-        }
-
-        $payment_options = [];
-
-        $sql = 'SELECT p.merchant_id, p.mode, p.min, p.max, pl.title, pl.description 
-                FROM ' . _DB_PREFIX_ . Pledgpaiements::$definition['table'] . ' AS p 
-                LEFT JOIN ' . _DB_PREFIX_ . Pledgpaiements::$definition['table'] . '_lang AS pl ON pl.id = p.id
-                WHERE p.status = 1 AND pl.id_lang = ' . $this->context->language->id;
-
-        if ($results = Db::getInstance()->ExecuteS($sql)) {
-
-            foreach ($results as $result) {
-
-                $this->context->smarty->assign([
-                    'description' => $result['description']
-                ]);
-
-                $newOption = new PaymentOption();
-                $newOption->setModuleName($result['title']);
-                $newOption->setCallToActionText($result['title']);
-                $newOption->setAction($this->context->link->getModuleLink($this->name, 'iframe', array(), true));
-                $newOption->setAdditionalInformation($this->fetch('module:pledg/views/templates/front/payment_infos.tpl'));
-                $newOption->setInputs([
-                    'merchantUid' => [
-                        'name' => 'merchantUid',
-                        'type' => 'hidden',
-                        'value' => $result['merchant_id'],
-                    ],
-                    'mode' => [
-                        'name' => 'mode',
-                        'type' => 'hidden',
-                        'value' => (($result['mode'] == 1) ? 'https://front.ecard.pledg.co' : 'https://staging.front.ecard.pledg.co'),
-                    ],
-                ]);
-
-                array_push($payment_options, $newOption);
-            }
-        }
-
-        return $payment_options;
-
-    }
-
     public function checkCurrency($cart){
 
         $currency_order = new Currency((int)($cart->id_currency));
@@ -392,9 +331,13 @@ class Pledg extends PaymentModule{
         // Total
         $total = str_replace('.', '', number_format($cart->getOrderTotal(), 2, '.', ''));
         $id_address_delivery = $cart->id_address_delivery;
-        $address = new Address($id_address_delivery);
+        $id_address_invoice = $cart->id_address_invoice;
+		$address = new Address($id_address_delivery);
+		$address_invoice = new Address($id_address_invoice);
         $id_country = $address->id_country;
+		$id_country_invoice = $address_invoice->id_country;
         $country_iso_code = Country::getIsoById($id_country);
+		$country_iso_code_invoice = Country::getIsoById($id_country_invoice);
 
         // Currency
         $currency = New Currency($cart->id_currency);
@@ -412,11 +355,11 @@ class Pledg extends PaymentModule{
             $phone = '';
         }
         
-        $sql = 'SELECT p.id, p.merchant_id, p.mode, p.min, p.max, p.priority, p.shops, pl.title, pl.description, p.secret, p.icon 
+        $sql = 'SELECT p.id, p.merchant_id, p.mode, p.min, p.max, p.position, p.shops, pl.title, pl.description, p.secret, p.icon 
                 FROM '. _DB_PREFIX_ .Pledgpaiements::$definition['table'] . ' AS p
                 LEFT JOIN '. _DB_PREFIX_ .Pledgpaiements::$definition['table'] . '_lang AS pl ON pl.id = p.id
                 WHERE p.status = 1 AND pl.id_lang = ' . $this->context->language->id
-                .' ORDER BY p.priority DESC';
+                .' ORDER BY p.position ASC';
 
         if ($results = Db::getInstance()->ExecuteS($sql)) {
             foreach ($results as $result) {
@@ -430,6 +373,8 @@ class Pledg extends PaymentModule{
                 if(in_array($currentShop, $shops)){
                     continue;
                 }
+                $lang = explode("-", $this->context->language->language_code);
+                $lang = implode("_", array($lang[0], strtoupper($lang[1])));
                 $paramsPledg = array(
                     'id' => $result['id'],
                     'titlePayment' => $result['title'],
@@ -439,6 +384,9 @@ class Pledg extends PaymentModule{
                     'title' => ( ($title)? implode(', ', $title) : '' ),
                     'reference' => self::PLEDG_REFERENCE_PREFIXE . $cart->id . "_" . time(),
                     'amountCents' => $total,
+                    'lang' => $lang,
+                    'countryCode'  => $this->context->country->iso_code,
+                    'showCloseButton' => false,
                     'currency' =>  $currency->iso_code,
                     'metadata'  => $this->create_metadata(),
                     'civility' => ( ($customer->id_gender == 1)? 'Mr' : 'Mme' ),
@@ -446,18 +394,17 @@ class Pledg extends PaymentModule{
                     'lastName' =>  $customer->lastname,
                     'email' => $customer->email,
                     'phoneNumber' => $phone,
-                    'birthDate' => ( ($customer->birthday != '0000-00-00')? $customer->birthday : date('Y-m-d')),
                     'birthCity' => '',
                     'birthStateProvince' => '',
                     'birthCountry' => '',
                     'actionUrl' => $this->context->link->getModuleLink($this->name, 'validation', array(), true),
-                    'cancelUrl' => $this->context->link->getModuleLink($this->name, 'cancel', array(), true),
+                    // 'cancelUrl' => $this->context->link->getModuleLink($this->name, 'cancel', array(), true),
                     'address' => [
-                        'street' => $address->address1,
-                        'city' => $address->city,
-                        'zipcode' => $address->postcode,
+						'street' => $address_invoice->address1,
+                        'city' => $address_invoice->city,
+                        'zipcode' => $address_invoice->postcode,
                         'stateProvince' => '',
-                        'country' => $country_iso_code
+                        'country' => $country_iso_code_invoice
                     ],
                     'shippingAddress' => [
                         'street' => $address->address1,
@@ -468,24 +415,10 @@ class Pledg extends PaymentModule{
                     ],
                 );
 
-                // Compound the signature if a secret exists
-                if (isset($result['secret']) && !empty($result['secret'])) {
-
-                    $arrayPayload['data'] = array(
-                        'merchantUid' => $result['merchant_id'],
-                        'amountCents' => $total,
-                        'currency' => $paramsPledg['currency'],
-                        'title' => $paramsPledg['title'],
-                        'email' => $paramsPledg['email'],
-                        'phoneNumber' => $paramsPledg['phoneNumber'],
-                        'reference' => $paramsPledg['reference'],
-                        'firstName' => $paramsPledg['firstName'],
-                        'lastName' => $paramsPledg['lastName'],
-                        'address' => $paramsPledg['shippingAddress']);
-
-                    $paramsPledg['signature'] = \Firebase\JWT\JWT::encode($arrayPayload, $result['secret']);
-                }
-
+				if ($customer->birthday != '0000-00-00') {
+					$paramsPledg['birthDate'] =	$customer->birthday;
+				}
+				
                 $paramsPledg['notificationUrl'] =
                     $this->context->link->getModuleLink(
                         $this->name,
@@ -497,8 +430,16 @@ class Pledg extends PaymentModule{
                         ),
                         true
                     );
-                $payments_pledg[] = $paramsPledg;
+                if (isset($result['secret']) && !empty($result['secret'])) {
+                    $paramsPledg['signature'] = \Firebase\JWT\JWT::encode(array('data'=>$paramsPledg), $result['secret']);
+                }
+                else{
+                    $paramsPledg['metadata'] = json_encode($paramsPledg['metadata']);
+                    $paramsPledg['address'] = json_encode($paramsPledg['address']);
+                    $paramsPledg['shippingAddress'] = json_encode($paramsPledg['shippingAddress']);
+                }
 
+                $payments_pledg[] = $paramsPledg;
             }
         }
 
@@ -551,16 +492,20 @@ class Pledg extends PaymentModule{
 		{
             $products = $summaryDetails['products'];
             $md_products = [];
+			$md_products_count = 0;
             foreach ($products as $key_product => $product) {
-                $md_product = [];
-                $md_product['id_product'] = $product['id_product'];
-                $md_product['reference'] = $product['reference'];
-				$md_product['type'] = $product['is_virtual'] == "0" ? 'physical' : 'virtual';
-				$md_product['quantity'] = $product['quantity'] ;
-				$md_product['name'] = $product['name'];
-				$md_product['unit_amount_cents'] = intval($product['price_wt']*100);
-				$md_product['category'] = $product['category'];
-				array_push($md_products, $md_product);
+				if ($md_products_count < 5) {
+					$md_product = [];
+					$md_product['id_product'] = $product['id_product'];
+					$md_product['reference'] = $product['reference'];
+					$md_product['type'] = $product['is_virtual'] == "0" ? 'physical' : 'virtual';
+					$md_product['quantity'] = $product['quantity'] ;
+					$md_product['name'] = $product['name'];
+					$md_product['unit_amount_cents'] = intval($product['price_wt']*100);
+					$md_product['category'] = $product['category'];
+					array_push($md_products, $md_product);
+					$md_products_count++;
+				}
             }
             $metadata['delivery_mode'] = $summaryDetails['carrier']->name;
             $metadata['delivery_speed'] = $summaryDetails['carrier']->delay;
