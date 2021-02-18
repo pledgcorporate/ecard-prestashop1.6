@@ -75,12 +75,16 @@
                 civility: "{$value.civility}",
                 firstName: "{$value.firstName}",
                 lastName: "{$value.lastName}",
+                {if $value.birthDate != ''}birthDate: "{$value.birthDate}",{/if}
                 email: "{$value.email}",
-                address: {$value.address|json_encode},
+                countryCode: "{$value.countryCode}",
+                metadata: {$value.metadata nofilter},
+                address: {$value.address nofilter},
+                shippingAddress: {$value.shippingAddress nofilter},
                 phoneNumber: "{$value.phoneNumber}",
+                lang: "{$value.lang}",
             {/if}
-            showCloseButton: false,
-            lang: "{$lang}",
+            showCloseButton: {if $value.showCloseButton}true{else}false{/if},
             onSuccess: function (resultpayment) {
                 var form = getPledgForm{$value.id}();
                 addHiddenInput{$value.id}(form, "merchantUid", "{$value.merchantUid}");
