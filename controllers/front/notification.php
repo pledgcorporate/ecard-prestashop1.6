@@ -199,17 +199,25 @@ class PledgNotificationModuleFrontController extends ModuleFrontController
                 echo 'Total not match';
                 exit;
             }
-            $this->module->validateOrder(
-                (int)($cartId),
-                Configuration::get('PS_OS_PAYMENT'),
-                $priceConverted,
-                $this->module->name."_".$mode,
-                null,
-                array('transaction_id' => $chargeId),
-                null,
-                false,
-                $customer->secure_key
-            );
+	    try {
+                $this->module->validateOrder(
+                    (int)($cartId),
+                    Configuration::get('PS_OS_PAYMENT'),
+                    $priceConverted,
+                    $this->module->name."_".$mode,
+                    null,
+                    array('transaction_id' => $chargeId),
+                    null,
+                    false,
+                    $customer->secure_key
+                );
+	    } catch (Throwable $e) {
+                Logger::addLog(sprintf($this->module->l('Pledg Payment Notification Exception : %s'),$e->getMessage()),2);
+                header('HTTP/1.0 403 Forbidden');
+                echo $e->getMessage();
+                exit;
+            }
+		
             Logger::addLog(sprintf($this->module->l('Pledg Payment Notification Mode %s - Order validated by notication (even before validation).'),$mode));
 
             $pledgpaiementsConfirm = new PledgpaiementsConfirm();
