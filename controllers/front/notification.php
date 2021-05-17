@@ -7,7 +7,6 @@ class PledgNotificationModuleFrontController extends ModuleFrontController
 {
     public function initContent()
     {
-	echo 'hello world';
         parent::initContent();
         if (!isset($_GET['pledgPayment'])) {
             header('HTTP/1.0 403 Forbidden');
