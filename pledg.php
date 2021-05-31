@@ -43,7 +43,7 @@ class Pledg extends PaymentModule{
     public function __construct(){
         $this->name = 'pledg';
         $this->tab = 'payments_gateways';
-        $this->version = '2.1.2';
+        $this->version = '2.1.3';
         $this->author = 'LucasFougeras';
         $this->controllers = array('payment', 'validation', 'notification');
         $this->currencies = true;
